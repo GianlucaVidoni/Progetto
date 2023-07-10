@@ -1,0 +1,188 @@
+---
+title: "Progetto<br> Fondamenti di Scienza dei Dati"
+author: "Vidoni Gianluca"
+date: "2023-06-24"
+output: 
+  ioslides_presentation:
+    css: 'slides.css'
+---
+## Domande iniziali e dataset utilizzati
+
+- Quali sono i continenti che emettono più CO2.
+- Come le emissioni dei continenti si sono evolute nel tempo.
+- Nel continente che emette più emissioni chi sono le nazioni che emettono più CO2.
+- Come le emissioni di queste nazioni si sono evolute nel tempo.
+
+<strong>Dataset</strong>
+
+- Per inquinamento: https://www.kaggle.com/datasets/koustavghosh149/co2-emission-around-the-world
+- In questo dataset sono presenti tutte le nazioni del mondo con le relative emissioni di CO2 dal 1990 al 2019
+
+# Analisi Emissioni di CO2
+
+```{r echo=FALSE, message=FALSE}
+library(readr)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(treemap)
+library(d3treeR)
+library(data.tree)
+library(gganimate)
+
+pollution_raw <- read_csv("raw/CO2_emission.csv")
+pollution_raw <- pollution_raw[ , !names(pollution_raw) %in% c("2019...34")]
+colnames(pollution_raw)[colnames(pollution_raw) == "2019...35"] ="2019"
+
+pollution_raw[is.na(pollution_raw)] <- 0
+
+pollution_tidy <- gather(pollution_raw, colnames(pollution_raw[,sapply(pollution_raw,is.numeric)]), key = "Year", value = "CO2 emissions")
+pollution_tidy <- select(pollution_tidy, Country_Name = "Country Name", "Region", "Year", CO2_emissions = "CO2 emissions")
+pollution_tidy$Year <- as.integer(pollution_tidy$Year)
+
+
+grp_regions <- group_by(pollution_tidy, Region, Year)
+
+agg_regions <- grp_regions %>% summarise(Emissions_Per_Region = sum(CO2_emissions), .groups="keep")
+```
+
+## Emissioni Di CO2 Per Regione
+
+```{r echo=FALSE, message=FALSE}
+ggplot(data = agg_regions, aes(x = Year, y = Emissions_Per_Region, group = Region, color = Region)) + geom_line() + geom_point() + labs(title = "Emissioni di CO2 Per Regione da 1990 - 2019") + ylab("Emissioni Per Regione (Metric/Ton Per Capita)") + geom_line(linewidth=1) + xlab("Anno") + scale_x_continuous(labels=as.character(agg_regions$Year), breaks=agg_regions$Year) + scale_color_manual(values=c('gold', 'red', 'purple', 'orange', 'steelblue2', 'cyan', 'blue')) + theme(legend.position="bottom") + scale_x_continuous(breaks = seq(1990, 2019, by = 2))
+```
+
+## Anomalia Bahamas
+
+```{r echo=FALSE, message=FALSE}
+bahamas_trend <- grp_regions[grp_regions$Country_Name=="Bahamas, The",]
+colnames(bahamas_trend)[colnames(bahamas_trend) == "Country_Name"] ="Country"
+bahamas_trend$Country = "Bahamas"
+ggplot(data = bahamas_trend, aes(x = Year, y = CO2_emissions, color = Country )) + geom_line() + geom_point() + xlab("Anno") + labs(title = "Bahamas Emissioni di CO2 da 1990 - 2019") + ylab("Emissioni (Metric/Ton Per Capita)") + geom_line(linewidth=1) + scale_x_continuous(labels=as.character(agg_regions$Year), breaks=agg_regions$Year) + theme(legend.position="bottom") + scale_x_continuous(breaks = seq(1990, 2019, by = 2))
+```
+
+## Analisi grafici da altre fonti
+
+- Grafico da "Data Commons" con dati di "worldbank.org"
+- Fonte Grafico: https://datacommons.org/place/country/BHS/
+- Fonte Dati: https://datacatalog.worldbank.org/dataset/world-development-indicators/
+
+<img src="raw/chart.svg">
+
+- Grafico da "Our World in Data" con dati di "The Global Carbon Budget dataset"
+- Fonte Grafico: https://ourworldindata.org/co2/country/bahamas
+- Fonte Dati: https://globalcarbonbudget.org/archive/
+
+<iframe src="https://ourworldindata.org/grapher/co-emissions-per-capita?tab=chart&time=1990..latest&country=~BHS" loading="lazy" style="width: 100%; height: 600px; border: 0px none;"></iframe>
+
+## Media Delle Emissioni Di CO2
+
+```{r echo=FALSE, message=FALSE}
+agg_media <- agg_regions %>% group_by(Region) %>% summarise(Mean_Emissions_Per_Region=mean(Emissions_Per_Region), .groups="keep")
+
+ggplot(agg_media, aes(x = Region, y = Mean_Emissions_Per_Region, fill = Region)) + geom_bar(stat="identity", position = "dodge") + labs(title="Media Delle Emissioni Di CO2 Di Ogni Regione") + ylab("Emissioni Di CO2 (Metric/Ton Per Capita)") + xlab("Regione") + scale_fill_manual(values=c('gold', 'red', 'purple', 'orange', 'steelblue2', 'cyan', 'blue')) + theme(legend.position="bottom") + coord_flip()
+```
+
+## Media Delle Emissioni Di CO2 Nel Tempo
+
+```{r echo=FALSE, message=FALSE}
+a1 <- data.frame(agg_regions[agg_regions$Year==1990,], frame = 1990)
+a2 <- data.frame(agg_regions[agg_regions$Year==1991,], frame = 1991)
+a3 <- data.frame(agg_regions[agg_regions$Year==1992,], frame = 1992)
+a4 <- data.frame(agg_regions[agg_regions$Year==1993,], frame = 1993)
+a5 <- data.frame(agg_regions[agg_regions$Year==1994,], frame = 1994)
+a6 <- data.frame(agg_regions[agg_regions$Year==1995,], frame = 1995)
+a7 <- data.frame(agg_regions[agg_regions$Year==1996,], frame = 1996)
+a8 <- data.frame(agg_regions[agg_regions$Year==1997,], frame = 1997)
+a9 <- data.frame(agg_regions[agg_regions$Year==1998,], frame = 1998)
+a10 <- data.frame(agg_regions[agg_regions$Year==1999,], frame = 1999)
+a11 <- data.frame(agg_regions[agg_regions$Year==2000,], frame = 2000)
+a12 <- data.frame(agg_regions[agg_regions$Year==2001,], frame = 2001)
+a13 <- data.frame(agg_regions[agg_regions$Year==2002,], frame = 2002)
+a14 <- data.frame(agg_regions[agg_regions$Year==2003,], frame = 2003)
+a15 <- data.frame(agg_regions[agg_regions$Year==2004,], frame = 2004)
+a16 <- data.frame(agg_regions[agg_regions$Year==2005,], frame = 2005)
+a17 <- data.frame(agg_regions[agg_regions$Year==2006,], frame = 2006)
+a18 <- data.frame(agg_regions[agg_regions$Year==2007,], frame = 2007)
+a19 <- data.frame(agg_regions[agg_regions$Year==2008,], frame = 2008)
+a20 <- data.frame(agg_regions[agg_regions$Year==2009,], frame = 2009)
+a21 <- data.frame(agg_regions[agg_regions$Year==2010,], frame = 2010)
+a22 <- data.frame(agg_regions[agg_regions$Year==2011,], frame = 2011)
+a23 <- data.frame(agg_regions[agg_regions$Year==2012,], frame = 2012)
+a24 <- data.frame(agg_regions[agg_regions$Year==2013,], frame = 2013)
+a25 <- data.frame(agg_regions[agg_regions$Year==2014,], frame = 2014)
+a26 <- data.frame(agg_regions[agg_regions$Year==2015,], frame = 2015)
+a27 <- data.frame(agg_regions[agg_regions$Year==2016,], frame = 2016)
+a28 <- data.frame(agg_regions[agg_regions$Year==2017,], frame = 2017)
+a29 <- data.frame(agg_regions[agg_regions$Year==2018,], frame = 2018)
+a30 <- data.frame(agg_regions[agg_regions$Year==2019,], frame = 2019)
+
+data <- rbind(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30)
+barPlot <- ggplot(data, aes(x=Region, y=Emissions_Per_Region, fill=Region)) + geom_bar(stat='identity') + theme_bw() + coord_flip() +
+labs(title = "Year: {closest_state}") +
+transition_states(
+    frame,
+    transition_length = 3,
+    state_length = 2
+  ) +
+  ease_aes('sine-in-out') + scale_fill_manual(values=c('gold', 'red', 'purple', 'orange', 'steelblue2', 'cyan', 'blue')) + ylab("Emissioni Di CO2 (Metric/Ton Per Capita)") + xlab("Regione")
+barchartGif <- animate(barPlot, fps=60, duration = 10, width = 940, height = 480)
+barchartGif
+```
+
+## Media Delle Emissioni Di CO2 Di Ogni Paese
+
+```{r echo=FALSE, message=FALSE, results=FALSE, fig.show='hide'}
+tree_map_data <- pollution_tidy %>% group_by(Region, Country_Name) %>% summarise(Mean_Emissions_Per_Year=mean(CO2_emissions), .groups="keep")
+
+treeMap <- treemap(tree_map_data, index=c("Region", "Country_Name"), vSize="Mean_Emissions_Per_Year", type="index")
+```
+
+```{r echo=FALSE, message=FALSE}
+d3tree2(treeMap ,  rootname = "Mondo" )
+```
+
+## Top 10 Paesi Con Più Emissioni Di CO2 in Europa
+
+```{r echo=FALSE, message=FALSE}
+europe_mean <- pollution_tidy[pollution_tidy$Region=="Europe & Central Asia",] %>% group_by(Country_Name) %>% summarise(Mean_Emissions=mean(CO2_emissions), .groups="keep")
+europe_top <- europe_mean[order(europe_mean$Mean_Emissions, decreasing = TRUE), ]
+colnames(europe_top)[colnames(europe_top)=="Country_Name"] = "Country"
+
+ggplot(europe_top[1:10,], aes(x = Country, y = Mean_Emissions, fill = Country)) + geom_bar(stat="identity", position = "dodge") + labs(title="Top 10 Paesi Con In Media Più Emissioni Di CO2 In Europa") + ylab("Emissioni CO2 (Metric/Ton Per Capita)") + xlab("Paese") + theme(legend.position="bottom") + coord_flip()
+```
+
+## Domande finali e dataset utilizzati
+
+- Avendo preso in analisi le emissioni del Lussemburgo, quanto è alta la disparità tra la popolazione del Lussemburgo e gli altri paesi in Europa?
+
+<strong>Dataset:</strong>
+
+- Per Popolazione: https://www.kaggle.com/datasets/iamsouravbanerjee/world-population-dataset
+- In questo dataset sono indicate le rilevazioni del numero di popolazione dei paesi di tutto il mondo dal 2000 al 2022, ogni rilevazione è stata presa ogni 5 anni.
+
+# Rapporto Tra Quantità Di Popolazione Ed Emissioni Di CO2
+
+```{r echo=FALSE, message=FALSE}
+population_raw <- read_csv("raw/world_population.csv")
+colnames(population_raw)[colnames(population_raw) == "Country/Territory"] ="Country_Name"
+colnames(population_raw)[colnames(population_raw) == "2015 Population"] = 2015
+colnames(population_raw)[colnames(population_raw) == "2010 Population"] = 2010
+colnames(population_raw)[colnames(population_raw) == "2000 Population"] = 2000
+colnames(population_raw)[colnames(population_raw) == "1990 Population"] = 1990
+population_raw <- select(population_raw, "Country_Name", "2015", "2010", "2000", "1990")
+
+population_tidy <- gather(population_raw, colnames(population_raw[,sapply(population_raw,is.numeric)]), key = "Year", value = "Population")
+population_tidy$Country_Name[population_tidy$Country_Name == "Russia"] = "Russian Federation"
+colnames(population_tidy)[colnames(population_tidy)=="Country_Name"] = "Country"
+```
+
+## Popolazione Dei 10 Paesi Con Più Emissioni Di CO2 in Europa
+
+```{r echo=FALSE, message=FALSE}
+top_population <- population_tidy[population_tidy$Country %in% c(europe_top[1:10,]$Country),]
+agg_population <- top_population %>% group_by(Country) %>% summarise(Mean_Population=round(mean(Population), digits = 0), .groups="keep")
+
+options(scipen=999)
+ggplot(agg_population, aes(x = Country, y = Mean_Population, fill = Country)) + geom_bar(stat="identity", position = "dodge") + labs(title="Popolazione Dei 10 Paesi Con Più Emissioni Di CO2 in Europa") + ylab("Popolazione") + xlab("Paese") + coord_flip()
+```
